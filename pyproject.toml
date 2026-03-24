@@ -1,0 +1,17 @@
+[project]
+name = "pzfx-tools"
+version = "0.1.0"
+description = "GraphPad pzfx Tools"
+readme = "README.md"
+authors = [
+    { name = "Christoph Sommer", email = "christoph.sommer@ist.ac.at" }
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+pzfx-fill = "pzfx_tools.pzfx_fill:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
