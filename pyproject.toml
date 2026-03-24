@@ -7,7 +7,9 @@ authors = [
     { name = "Christoph Sommer", email = "christoph.sommer@ist.ac.at" }
 ]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "rich>=14.3.3",
+]
 
 [project.scripts]
 pzfx-fill = "pzfx_tools.pzfx_fill:main"
