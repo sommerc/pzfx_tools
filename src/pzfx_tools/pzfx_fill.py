@@ -260,9 +260,25 @@ def main() -> int:
 
     sel_feature_for: list[str] = []
     if feature_for_values:
-        sel_feature_for = ask_selection(
-            "Select feature_for", feature_for_values, single=False
+        # Only offer feature_for values that actually co-occur with the chosen
+        # subgroup AND at least one of the selected groups, so the user cannot
+        # pick a combination that yields zero data rows and empty tables.
+        if group_by == "stage":
+            subgroup_col, subgroup_val = "Genotype", sel_genotypes[0]
+            group_col_ff, group_vals_ff = "Stage", set(sel_stages)
+        else:
+            subgroup_col, subgroup_val = "Stage", sel_stages[0]
+            group_col_ff, group_vals_ff = "Genotype", set(sel_genotypes)
+        available_ff = sorted(
+            {r.get("feature_for", "").strip() for r in rows
+             if r.get(subgroup_col, "").strip() == subgroup_val
+             and r.get(group_col_ff, "").strip() in group_vals_ff}
+            - {""}
         )
+        if available_ff:
+            sel_feature_for = ask_selection("Select feature_for", available_ff, single=False)
+        else:
+            console.print("[yellow]No feature_for values found for the selected stage/genotype combination.[/yellow]")
 
     sel_features = ask_selection("Features (YColumns)", features, single=False)
 
