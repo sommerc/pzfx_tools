@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 pzfx-fill = "pzfx_tools.pzfx_fill:main"
+pzfx-fill-frequency = "pzfx_tools.pzfx_fill_frequency:main"
 
 [build-system]
 requires = ["hatchling"]
