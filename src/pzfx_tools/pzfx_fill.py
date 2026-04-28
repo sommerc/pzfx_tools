@@ -23,7 +23,7 @@ console = Console()
 
 # ── data helpers ──────────────────────────────────────────────────────────────
 
-META_COLS = {"Movie", "Stage", "Genotype", "Frames", "Track_idx", "feature_for", ""}
+META_COLS = {"Movie", "Stage", "Genotype", "Frames", "Track_idx", "Name", "feature_for", ""}
 
 
 def read_tab(path: str) -> list[dict]:
