@@ -128,6 +128,55 @@ def ask_group_by() -> str:
         console.print("[red]Enter 1 or 2.[/red]")
 
 
+def _detect_lr_pairs(ff_values: list[str]) -> dict[str, tuple[str, str]]:
+    """Return {base: (left_XXX, right_XXX)} for every left_/right_ pair present."""
+    left_map = {v[5:]: v for v in ff_values if v.startswith("left_")}
+    right_map = {v[6:]: v for v in ff_values if v.startswith("right_")}
+    return {base: (left_map[base], right_map[base]) for base in left_map if base in right_map}
+
+
+def ask_feature_fors_with_lr(
+    available_ff: list[str],
+) -> list[str | tuple[str, list[str]]]:
+    """Prompt for feature_for selection, collapsing left_/right_ pairs into base names."""
+    pairs = _detect_lr_pairs(available_ff)
+    paired_raw = {v for lf, rf in pairs.values() for v in (lf, rf)}
+
+    seen_bases: set[str] = set()
+    display_items: list[str] = []
+    for ff in available_ff:
+        if ff in paired_raw:
+            base = ff[5:] if ff.startswith("left_") else ff[6:]
+            if base not in seen_bases:
+                seen_bases.add(base)
+                display_items.append(base)
+        else:
+            display_items.append(ff)
+
+    selected = ask_selection("Select feature_for", display_items, single=False)
+
+    result: list[str | tuple[str, list[str]]] = []
+    for item in selected:
+        if item in pairs:
+            left_ff, right_ff = pairs[item]
+            console.print(f"\n[bold cyan]'{item}'[/bold cyan] has left/right variants:")
+            console.print(f"  [bold cyan][1][/bold cyan] Separate columns  (left_{item} / right_{item})")
+            console.print("  [bold cyan][2][/bold cyan] Combine left and right into one column  [dim](absolute values)[/dim]")
+            while True:
+                raw = Prompt.ask("[bold green]Selection[/bold green]", default="2")
+                if raw.strip() == "1":
+                    result.append(left_ff)
+                    result.append(right_ff)
+                    break
+                if raw.strip() == "2":
+                    result.append((item, [left_ff, right_ff]))
+                    break
+                console.print("[red]Enter 1 or 2.[/red]")
+        else:
+            result.append(item)
+    return result
+
+
 # ── pzfx builder ──────────────────────────────────────────────────────────────
 
 
@@ -138,7 +187,7 @@ def build_pzfx(
     selected_features: list[str],
     selected_stages: list[str],
     selected_genotypes: list[str],
-    selected_feature_fors: list[str],
+    selected_feature_fors: list[str | tuple[str, list[str]]],
     output_path: str,
 ) -> int:
     """Build the .pzfx file and return the number of tables written."""
@@ -172,7 +221,16 @@ def build_pzfx(
     ff_list = selected_feature_fors if selected_feature_fors else [None]
     table_idx = 0
     for feature in selected_features:
-        for ff in ff_list:
+        for ff_entry in ff_list:
+            if ff_entry is None:
+                ff_display: str | None = None
+                ff_filter: list[str] | None = None
+            elif isinstance(ff_entry, tuple):
+                ff_display, ff_filter = ff_entry[0], list(ff_entry[1])
+            else:
+                ff_display = ff_entry
+                ff_filter = [ff_entry]
+
             table_id = f"Table{1000 + table_idx}"
             table_idx += 1
 
@@ -187,7 +245,7 @@ def build_pzfx(
             table_el.set("EVFormat", "AsteriskAfterNumber")
 
             title_el = ET.SubElement(table_el, "Title")
-            base_title = f"{feature} ({ff})" if ff else feature
+            base_title = f"{feature} ({ff_display})" if ff_display else feature
             title_el.text = f"{base_title} ({subgroup})" if subgroup else base_title
 
             # ── one YColumn per group (stage or genotype), skip if empty ──
@@ -197,7 +255,7 @@ def build_pzfx(
                     for r in rows
                     if r.get(group_col, "").strip() == group
                     and (not subgroup or r.get(subgroup_col, "").strip() == subgroup)
-                    and (ff is None or r.get("feature_for", "").strip() == ff)
+                    and (ff_filter is None or r.get("feature_for", "").strip() in ff_filter)
                 ]
                 values = [r.get(feature, "").strip() for r in sub_rows]
                 if not any(values):
@@ -215,6 +273,11 @@ def build_pzfx(
 
                 for val in values:
                     d_el = ET.SubElement(sub_el, "d")
+                    if val and ff_filter and len(ff_filter) > 1:
+                        try:
+                            val = str(abs(float(val)))
+                        except ValueError:
+                            pass
                     d_el.text = val if val else None
 
     ET.indent(root, space="\t")
@@ -276,7 +339,7 @@ def main() -> int:
             - {""}
         )
         if available_ff:
-            sel_feature_for = ask_selection("Select feature_for", available_ff, single=False)
+            sel_feature_for = ask_feature_fors_with_lr(available_ff)
         else:
             console.print("[yellow]No feature_for values found for the selected stage/genotype combination.[/yellow]")
 
