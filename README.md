@@ -132,3 +132,6 @@ Columns  → one per Stage or Genotype
 Rows     → one replicate subcolumn per track
 Title    → feature_for value (e.g. "tail_2")
 ```
+
+**Contributors**
+"90% of this codebase was generated using Claude 4.6 Sonnet, directed and audited by Christoph Sommer."
